@@ -1,0 +1,99 @@
+# Use the latest 2.1 version of CircleCI pipeline process engine.
+# See: https://circleci.com/docs/configuration-reference
+version: 2.1
+
+commands:
+  install-dependencies:
+    steps:
+      - checkout
+      - run:
+          name: Enabling corepack
+          command: |
+            mkdir -p "$HOME/.corepack"
+            corepack enable --install-directory "$HOME/.corepack"
+            echo 'export PATH="$HOME/.corepack:$PATH"' >> "$BASH_ENV"
+      - run:
+          name: Installing dependencies
+          command: pnpm install --frozen-lockfile
+
+jobs:
+  build:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Building package
+          command: pnpm build
+
+  tests:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Running tests
+          command: pnpm test
+
+  lint:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Running linter
+          command: pnpm lint
+
+  type_check:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Running type checking
+          command: pnpm typecheck
+
+  format:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Checking formatting
+          command: pnpm format:check
+
+  deploy:
+    docker:
+      - image: cimg/node:lts
+    steps:
+      - install-dependencies
+      - run:
+          name: Building package
+          command: pnpm build
+      - run:
+          name: Publishing to npm
+          command: |
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+            pnpm publish --no-git-checks
+
+workflows:
+  version: 2
+  ci:
+    jobs:
+      - build
+      - tests
+      - lint
+      - type_check
+      - format
+      - deploy:
+          requires:
+            - build
+            - tests
+            - lint
+            - type_check
+            - format
+          filters:
+            tags:
+              only: /^v\d+\.\d+\.\d+$/
+            branches:
+              ignore: /.*/
