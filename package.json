@@ -50,6 +50,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit"
   },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
   "devDependencies": {
     "@arethetypeswrong/core": "^0.18.5",
     "@types/node": "^26.2.0",
