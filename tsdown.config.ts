@@ -5,4 +5,6 @@ export default defineConfig({
   format: ["esm", "cjs"],
   dts: true,
   clean: true,
+  publint: "ci-only",
+  attw: { enabled: "ci-only", profile: "node16", level: "error" },
 });
