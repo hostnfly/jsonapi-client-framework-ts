@@ -1,0 +1,40 @@
+{
+  "meta": {
+    "total": 2
+  },
+  "data": [
+    {
+      "id": "1",
+      "type": "media",
+      "attributes": {
+        "title": "Das weiße Band - Eine deutsche Kindergeschichte",
+        "year": 2009
+      },
+      "relationships": {
+        "director": {
+          "data": {
+            "id": "1",
+            "type": "person"
+          }
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "media",
+      "attributes": {
+        "title": "Good Morning, Veronica",
+        "seasons": 3
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "1",
+      "type": "person",
+      "attributes": {
+        "full_name": "Michael Haneke"
+      }
+    }
+  ]
+}

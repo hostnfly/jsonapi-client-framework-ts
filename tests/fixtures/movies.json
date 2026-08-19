@@ -1,0 +1,48 @@
+{
+  "meta": {
+    "total": 2
+  },
+  "data": [
+    {
+      "id": "1",
+      "type": "movie",
+      "attributes": {
+        "title": "Das weiße Band - Eine deutsche Kindergeschichte",
+        "year": 2009
+      },
+      "relationships": {
+        "director": {
+          "data": {
+            "id": "1",
+            "type": "person"
+          }
+        }
+      }
+    },
+    {
+      "id": "2",
+      "type": "movie",
+      "attributes": {
+        "title": "Funny Games",
+        "year": 1997
+      },
+      "relationships": {
+        "director": {
+          "data": {
+            "id": "1",
+            "type": "person"
+          }
+        }
+      }
+    }
+  ],
+  "included": [
+    {
+      "id": "1",
+      "type": "person",
+      "attributes": {
+        "full_name": "Michael Haneke"
+      }
+    }
+  ]
+}
