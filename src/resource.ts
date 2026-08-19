@@ -1,4 +1,4 @@
-import type { JsonAPIClient } from "./client.js";
+import type { JsonAPIAuth, JsonAPIClient } from "./client.js";
 import { JsonAPIQuery, type JsonAPIIncludeValue } from "./query.js";
 import {
   JsonAPISerializer,
@@ -10,6 +10,14 @@ export class JsonAPIResource<T> {
     private readonly client: JsonAPIClient<T>,
     private readonly include?: JsonAPIIncludeValue,
   ) {}
+
+  get url(): string {
+    return this.client.url;
+  }
+
+  get auth(): JsonAPIAuth | undefined {
+    return this.client.auth;
+  }
 
   async get(): Promise<T> {
     const params = JsonAPIQuery.toRequestParams({ include: this.include });
