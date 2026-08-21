@@ -1,3 +1,4 @@
+export { APIError, JsonAPIClient, type JsonAPIAuth } from "./client.js";
 export { JsonAPIParser } from "./parser.js";
 export {
   JsonAPIError,
