@@ -294,4 +294,41 @@ const charactersList = await moviesWithCharacters
   .all();
 ```
 
-Full documentation coming as the port progresses.
+### Custom encoding/decoding
+
+Model fields are plain [zod](https://zod.dev/) schemas, so reading a non-string attribute (like a date) is just a matter of using zod's own coercion/transform features — no separate registry needed:
+
+```ts
+import {
+  JsonAPICollection,
+  JsonAPIResourceSchema,
+} from "jsonapi-client-framework-ts";
+import { z } from "zod";
+
+const Movie = JsonAPIResourceSchema.extend({
+  title: z.string(),
+  // GET .../movies/178 -> attributes.released_at is the string "1993-06-11T00:00:00.000Z"
+  // released_at ends up as a real Date instance here
+  released_at: z.coerce.date(),
+});
+type Movie = z.infer<typeof Movie>;
+
+class Movies extends JsonAPICollection<Movie> {
+  readonly endpoint = "/movies";
+  readonly schema = Movie;
+}
+
+const movies = new Movies("https://your_api.domain.com/v1");
+const movie = await movies.resource("178").get();
+movie.released_at.getFullYear(); // => 1993
+```
+
+Writing a `Date` back doesn't need anything special either — `JSON.stringify` already serializes `Date` values to an ISO 8601 string on its own:
+
+```ts
+// PUT .../movies/178
+// Request body: { "data": { "attributes": { "released_at": "1993-06-11T00:00:00.000Z" } } }
+await movies
+  .resource("178")
+  .update({ released_at: new Date("1993-06-11T00:00:00.000Z") });
+```
