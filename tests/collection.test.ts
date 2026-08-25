@@ -11,6 +11,11 @@ class Movies extends JsonAPICollection<z.infer<typeof Movie>> {
   readonly schema = Movie;
 }
 
+class MoviesWithDirector extends JsonAPICollection<z.infer<typeof Movie>> {
+  readonly endpoint = "/movies";
+  readonly schema = Movie;
+}
+
 function mockFetchOnce(body: unknown, status = 200): void {
   vi.stubGlobal(
     "fetch",
@@ -56,5 +61,67 @@ describe("JsonAPICollection", () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toBe("http://example.com/api/movies");
     expect(init?.method).toBe("POST");
+  });
+
+  it("passes include through to resource()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "178",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new MoviesWithDirector(
+      "http://example.com/api",
+      undefined,
+      undefined,
+      "director",
+    );
+
+    await movies.resource("178").get();
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("include")).toBe("director");
+  });
+
+  it("passes include through to create()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "178",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new MoviesWithDirector(
+      "http://example.com/api",
+      undefined,
+      undefined,
+      "director",
+    );
+
+    await movies.create({ title: "Jurassic Park" });
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("include")).toBe("director");
+  });
+
+  it("builds a JsonAPIResourcesList scoped to the collection endpoint via list()", async () => {
+    mockFetchOnce({
+      data: [
+        { id: "178", type: "movie", attributes: { title: "Jurassic Park" } },
+      ],
+      meta: { pagination: {} },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    const result = await movies
+      .list({ filters: { year: 1993 }, sort: "title" })
+      .all();
+
+    expect(result).toEqual([{ id: "178", title: "Jurassic Park" }]);
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    const params = new URL(String(url)).searchParams;
+    expect(params.get("filter[year]")).toBe("1993");
+    expect(params.get("sort")).toBe("title");
   });
 });

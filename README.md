@@ -52,6 +52,103 @@ const people = new People("https://your_api.domain.com/v1");
 
 ## Features
 
+### Get full results as a list
+
+```ts
+// GET https://your_api.domain.com/v1/people?page[number]=1
+// GET https://your_api.domain.com/v1/people?page[number]=2
+// ...
+// GET https://your_api.domain.com/v1/people?page[number]=23
+const peopleList = await people.list().all();
+```
+
+`.all()` loads every page into memory before returning. For large result sets, `.pages()` yields one page at a time instead, so you can stop early without fetching the rest:
+
+```ts
+for await (const page of people.list().pages()) {
+  // process(page) — one page's worth of results at a time
+  if (foundWhatIWasLookingFor(page)) break; // no further pages get fetched
+}
+```
+
+### Get a single result's page
+
+```ts
+// GET https://your_api.domain.com/v1/people?page[number]=2
+const [peoplePage, meta] = await people.list().paginated(2);
+
+// GET https://your_api.domain.com/v1/people?page[number]=2&page[size]=30
+const [peoplePageSized, sizedMeta] = await people.list().paginated(2, 30);
+```
+
+### Filter results
+
+```ts
+// GET https://your_api.domain.com/v1/people?filter[date_of_birth]=1984&page[number]=1
+// ...
+// GET https://your_api.domain.com/v1/people?filter[date_of_birth]=1984&page[number]=4
+const filteredPeople = await people
+  .list({ filters: { date_of_birth: 1984 } })
+  .all();
+```
+
+### Sort results
+
+```ts
+// GET https://your_api.domain.com/v1/people?sort=first_name,last_name&page[number]=1
+// ...
+// GET https://your_api.domain.com/v1/people?sort=first_name,last_name&page[number]=23
+const sortedPeople = await people
+  .list({ sort: ["first_name", "last_name"] })
+  .all();
+```
+
+### Related resources
+
+```ts
+import {
+  JsonAPICollection,
+  JsonAPIResourceIdentifier,
+  JsonAPIResourceSchema,
+} from "jsonapi-client-framework-ts";
+import { z } from "zod";
+
+const Movie = JsonAPIResourceSchema.extend({
+  title: z.string(),
+  year: z.number(),
+  // By default, the JSON:API payload only contains the identifier (id and type)
+  director: z.union([Person, JsonAPIResourceIdentifier]),
+});
+type Movie = z.infer<typeof Movie>;
+
+class Movies extends JsonAPICollection<Movie> {
+  readonly endpoint = "/movies";
+  readonly schema = Movie;
+}
+
+const movies = new Movies("https://your_api.domain.com/v1");
+// GET https://your_api.domain.com/v1/movies/178
+const movie = await movies.resource("178").get();
+movie.director.id; // => "7"
+
+const moviesWithDirector = new Movies(
+  "https://your_api.domain.com/v1",
+  undefined,
+  undefined,
+  "director",
+);
+// GET https://your_api.domain.com/v1/movies/178?include=director
+const movieWithDirector = await moviesWithDirector.resource("178").get();
+if ("year_of_birth" in movieWithDirector.director) {
+  movieWithDirector.director.year_of_birth; // => 1961
+}
+
+// GET https://your_api.domain.com/v1/movies?include=director&page[number]=1
+// ...
+// GET https://your_api.domain.com/v1/movies?include=director&page[number]=117
+const moviesList = await moviesWithDirector.list().all();
+```
+
 ### Get a single resource as an object
 
 ```ts

@@ -1,20 +1,26 @@
 import type { JsonAPIClient } from "./client.js";
+import { JsonAPIQuery, type JsonAPIIncludeValue } from "./query.js";
 import {
   JsonAPISerializer,
   type JsonAPISerializerValue,
 } from "./serializer.js";
 
 export class JsonAPIResource<T> {
-  constructor(private readonly client: JsonAPIClient<T>) {}
+  constructor(
+    private readonly client: JsonAPIClient<T>,
+    private readonly include?: JsonAPIIncludeValue,
+  ) {}
 
   async get(): Promise<T> {
-    const [resource] = await this.client.get();
+    const params = JsonAPIQuery.toRequestParams({ include: this.include });
+    const [resource] = await this.client.get(params);
     return resource as T;
   }
 
   async update(attributes: Record<string, JsonAPISerializerValue>): Promise<T> {
     const payload = JsonAPISerializer.toJsonAPI(attributes);
-    const [resource] = await this.client.put(payload);
+    const params = JsonAPIQuery.toRequestParams({ include: this.include });
+    const [resource] = await this.client.put(payload, params);
     return resource;
   }
 

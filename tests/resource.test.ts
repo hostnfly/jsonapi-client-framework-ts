@@ -77,4 +77,42 @@ describe("JsonAPIResource", () => {
     const [, init] = vi.mocked(fetch).mock.calls[0];
     expect(init?.method).toBe("DELETE");
   });
+
+  it("passes include through to get()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park", year: 1993 },
+      },
+    });
+    const resource = new JsonAPIResource(
+      new JsonAPIClient("http://example.com/api/movies/179", Movie),
+      "director",
+    );
+
+    await resource.get();
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("include")).toBe("director");
+  });
+
+  it("passes include through to update()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park", year: 1993 },
+      },
+    });
+    const resource = new JsonAPIResource(
+      new JsonAPIClient("http://example.com/api/movies/179", Movie),
+      "director",
+    );
+
+    await resource.update({ year: 1993 });
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("include")).toBe("director");
+  });
 });
