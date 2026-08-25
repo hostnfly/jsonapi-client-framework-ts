@@ -203,4 +203,95 @@ const authenticatedPeople = new People(
 );
 ```
 
+### Sub-collections
+
+```ts
+import {
+  JsonAPICollection,
+  JsonAPIResourceSchema,
+} from "jsonapi-client-framework-ts";
+import { z } from "zod";
+
+const Movie = JsonAPIResourceSchema.extend({ title: z.string() });
+type Movie = z.infer<typeof Movie>;
+
+const Theater = JsonAPIResourceSchema.extend({ name: z.string() });
+type Theater = z.infer<typeof Theater>;
+
+class Theaters extends JsonAPICollection<Theater> {
+  readonly endpoint = "/theaters";
+  readonly schema = Theater;
+}
+
+class Movies extends JsonAPICollection<Movie> {
+  readonly endpoint = "/movies";
+  readonly schema = Movie;
+
+  theaters(): Theaters {
+    return new Theaters(`${this.baseUrl}${this.endpoint}`, this.auth);
+  }
+}
+
+const movies = new Movies("https://your_api.domain.com/v1");
+
+// GET https://your_api.domain.com/v1/movies/theaters?page[number]=1
+// ...
+// GET https://your_api.domain.com/v1/movies/theaters?page[number]=6
+const theatersList = await movies.theaters().list().all();
+```
+
+### Sub-resources
+
+```ts
+import {
+  JsonAPIClient,
+  JsonAPICollection,
+  JsonAPIResource,
+  JsonAPIResourceSchema,
+} from "jsonapi-client-framework-ts";
+import { z } from "zod";
+
+const Character = JsonAPIResourceSchema.extend({ name: z.string() });
+type Character = z.infer<typeof Character>;
+
+class Characters extends JsonAPICollection<Character> {
+  readonly endpoint = "/characters";
+  readonly schema = Character;
+}
+
+class MovieResource extends JsonAPIResource<Movie> {
+  characters(): Characters {
+    return new Characters(this.url, this.auth);
+  }
+}
+
+class MoviesWithCharacters extends JsonAPICollection<Movie> {
+  readonly endpoint = "/movies";
+  readonly schema = Movie;
+
+  // Override resource() so it returns a MovieResource instead of the base JsonAPIResource
+  override resource(resourceId: string): MovieResource {
+    const client = new JsonAPIClient<Movie>(
+      `${this.baseUrl}${this.endpoint}/${encodeURIComponent(resourceId)}`,
+      this.schema,
+      this.auth,
+    );
+    return new MovieResource(client, this.include);
+  }
+}
+
+const moviesWithCharacters = new MoviesWithCharacters(
+  "https://your_api.domain.com/v1",
+);
+
+// GET https://your_api.domain.com/v1/movies/34/characters?page[number]=1
+// ...
+// GET https://your_api.domain.com/v1/movies/34/characters?page[number]=5
+const charactersList = await moviesWithCharacters
+  .resource("34")
+  .characters()
+  .list()
+  .all();
+```
+
 Full documentation coming as the port progresses.

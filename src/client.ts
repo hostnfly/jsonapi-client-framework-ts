@@ -43,9 +43,9 @@ async function handleStatusCode(response: Response): Promise<void> {
 
 export class JsonAPIClient<T> {
   constructor(
-    private readonly url: string,
+    readonly url: string,
     private readonly schema: z.ZodType<T>,
-    private readonly auth?: JsonAPIAuth,
+    readonly auth?: JsonAPIAuth,
   ) {}
 
   async get(
