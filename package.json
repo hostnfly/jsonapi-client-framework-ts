@@ -1,6 +1,6 @@
 {
   "name": "jsonapi-client-framework-ts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "An object-oriented framework for JSON:API clients.",
   "license": "MIT",
   "author": "HostnFly",
