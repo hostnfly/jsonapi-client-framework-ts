@@ -2,6 +2,11 @@
 # See: https://circleci.com/docs/configuration-reference
 version: 2.1
 
+# Jobs run on every branch push by default but are skipped on tag pushes
+# unless they opt in with this filter — required for anything `deploy` depends on.
+release_tag: &release_tag
+  only: /^v\d+\.\d+\.\d+$/
+
 commands:
   install-dependencies:
     steps:
@@ -80,11 +85,21 @@ workflows:
   version: 2
   ci:
     jobs:
-      - build
-      - tests
-      - lint
-      - type_check
-      - format
+      - build:
+          filters:
+            tags: *release_tag
+      - tests:
+          filters:
+            tags: *release_tag
+      - lint:
+          filters:
+            tags: *release_tag
+      - type_check:
+          filters:
+            tags: *release_tag
+      - format:
+          filters:
+            tags: *release_tag
       - deploy:
           requires:
             - build
@@ -93,7 +108,6 @@ workflows:
             - type_check
             - format
           filters:
-            tags:
-              only: /^v\d+\.\d+\.\d+$/
+            tags: *release_tag
             branches:
               ignore: /.*/
