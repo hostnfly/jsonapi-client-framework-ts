@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { JsonAPICollection } from "../src/collection.js";
+import { JsonAPICollection, JsonAPISingleton } from "../src/collection.js";
 import { JsonAPIResourceSchema } from "../src/schema.js";
 
 const Movie = JsonAPIResourceSchema.extend({ title: z.string() });
@@ -13,6 +13,18 @@ class Movies extends JsonAPICollection<z.infer<typeof Movie>> {
 
 class MoviesWithDirector extends JsonAPICollection<z.infer<typeof Movie>> {
   readonly endpoint = "/movies";
+  readonly schema = Movie;
+}
+
+class FeaturedMovie extends JsonAPISingleton<z.infer<typeof Movie>> {
+  readonly endpoint = "/featured_movie";
+  readonly schema = Movie;
+}
+
+class FeaturedMovieWithDirector extends JsonAPISingleton<
+  z.infer<typeof Movie>
+> {
+  readonly endpoint = "/featured_movie";
   readonly schema = Movie;
 }
 
@@ -123,5 +135,66 @@ describe("JsonAPICollection", () => {
     const params = new URL(String(url)).searchParams;
     expect(params.get("filter[year]")).toBe("1993");
     expect(params.get("sort")).toBe("title");
+  });
+});
+
+describe("JsonAPISingleton", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("builds a resource scoped to the singleton endpoint", async () => {
+    mockFetchOnce({
+      data: {
+        id: "1",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const featuredMovie = new FeaturedMovie("http://example.com/api");
+
+    const movie = await featuredMovie.resource().get();
+
+    expect(movie.title).toBe("Jurassic Park");
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toBe("http://example.com/api/featured_movie");
+  });
+
+  it("creates the singleton resource", async () => {
+    mockFetchOnce({
+      data: {
+        id: "1",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const featuredMovie = new FeaturedMovie("http://example.com/api");
+
+    const movie = await featuredMovie.create({ title: "Jurassic Park" });
+
+    expect(movie.title).toBe("Jurassic Park");
+    const [url, init] = vi.mocked(fetch).mock.calls[0];
+    expect(String(url)).toBe("http://example.com/api/featured_movie");
+    expect(init?.method).toBe("POST");
+  });
+
+  it("includes the include param when creating the singleton resource", async () => {
+    mockFetchOnce({
+      data: {
+        id: "1",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const featuredMovie = new FeaturedMovieWithDirector(
+      "http://example.com/api",
+      undefined,
+      "director",
+    );
+
+    await featuredMovie.create({ title: "Jurassic Park" });
+
+    const [url] = vi.mocked(fetch).mock.calls[0];
+    expect(new URL(String(url)).searchParams.get("include")).toBe("director");
   });
 });
