@@ -14,7 +14,7 @@ import {
   type JsonAPISerializerValue,
 } from "./serializer.js";
 
-export abstract class JsonAPISingleton<T> {
+abstract class JsonAPIBaseResource<T> {
   abstract readonly endpoint: string;
   abstract readonly schema: z.ZodType<T>;
 
@@ -24,13 +24,25 @@ export abstract class JsonAPISingleton<T> {
     protected readonly include?: JsonAPIIncludeValue,
   ) {}
 
-  resource(): JsonAPIResource<T> {
-    const client = new JsonAPIClient<T>(
+  protected get client(): JsonAPIClient<T> {
+    return new JsonAPIClient<T>(
       `${this.baseUrl}${this.endpoint}`,
       this.schema,
       this.auth,
     );
-    return new JsonAPIResource<T>(client, this.include);
+  }
+
+  async create(attributes: Record<string, JsonAPISerializerValue>): Promise<T> {
+    const payload = JsonAPISerializer.toJsonAPI(attributes);
+    const params = JsonAPIQuery.toRequestParams({ include: this.include });
+    const [resource] = await this.client.post(payload, params);
+    return resource;
+  }
+}
+
+export abstract class JsonAPISingleton<T> extends JsonAPIBaseResource<T> {
+  resource(): JsonAPIResource<T> {
+    return new JsonAPIResource<T>(this.client, this.include);
   }
 }
 
@@ -40,16 +52,15 @@ export interface JsonAPIListOptions {
   extraParams?: Record<string, string>;
 }
 
-export abstract class JsonAPICollection<T> {
-  abstract readonly endpoint: string;
-  abstract readonly schema: z.ZodType<T>;
-
+export abstract class JsonAPICollection<T> extends JsonAPIBaseResource<T> {
   constructor(
-    protected readonly baseUrl: string,
-    protected readonly auth?: JsonAPIAuth,
+    baseUrl: string,
+    auth?: JsonAPIAuth,
     protected readonly defaultPageSize?: number,
-    protected readonly include?: JsonAPIIncludeValue,
-  ) {}
+    include?: JsonAPIIncludeValue,
+  ) {
+    super(baseUrl, auth, include);
+  }
 
   resource(resourceId: string): JsonAPIResource<T> {
     const client = new JsonAPIClient<T>(
@@ -61,29 +72,12 @@ export abstract class JsonAPICollection<T> {
   }
 
   list(options: JsonAPIListOptions = {}): JsonAPIResourcesList<T> {
-    const client = new JsonAPIClient<T>(
-      `${this.baseUrl}${this.endpoint}`,
-      this.schema,
-      this.auth,
-    );
-    return new JsonAPIResourcesList<T>(client, {
+    return new JsonAPIResourcesList<T>(this.client, {
       defaultPageSize: this.defaultPageSize,
       filters: options.filters,
       sort: options.sort,
       include: this.include,
       extraParams: options.extraParams,
     });
-  }
-
-  async create(attributes: Record<string, JsonAPISerializerValue>): Promise<T> {
-    const client = new JsonAPIClient<T>(
-      `${this.baseUrl}${this.endpoint}`,
-      this.schema,
-      this.auth,
-    );
-    const payload = JsonAPISerializer.toJsonAPI(attributes);
-    const params = JsonAPIQuery.toRequestParams({ include: this.include });
-    const [resource] = await client.post(payload, params);
-    return resource;
   }
 }
