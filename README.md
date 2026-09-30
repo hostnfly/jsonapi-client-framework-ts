@@ -172,7 +172,7 @@ class Movies extends JsonAPICollection<Movie> {
 
 const movies = new Movies("https://your_api.domain.com/v1");
 
-// PUT https://your_api.domain.com/v1/movies/179
+// PATCH https://your_api.domain.com/v1/movies/179
 const updatedMovie = await movies.resource("179").update({ year: 1993 });
 ```
 
@@ -326,7 +326,7 @@ movie.released_at.getFullYear(); // => 1993
 Writing a `Date` back doesn't need anything special either — `JSON.stringify` already serializes `Date` values to an ISO 8601 string on its own:
 
 ```ts
-// PUT .../movies/178
+// PATCH .../movies/178
 // Request body: { "data": { "attributes": { "released_at": "1993-06-11T00:00:00.000Z" } } }
 await movies
   .resource("178")

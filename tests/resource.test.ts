@@ -60,7 +60,7 @@ describe("JsonAPIResource", () => {
 
     expect(movie.year).toBe(1993);
     const [, init] = vi.mocked(fetch).mock.calls[0];
-    expect(init?.method).toBe("PUT");
+    expect(init?.method).toBe("PATCH");
     expect(JSON.parse(init?.body as string)).toEqual({
       data: { attributes: { year: 1993 } },
     });

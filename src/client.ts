@@ -64,11 +64,11 @@ export class JsonAPIClient<T> {
     return [resource as T, meta];
   }
 
-  async put(
+  async patch(
     payload: Record<string, unknown>,
     params?: Record<string, string>,
   ): Promise<[T, Record<string, unknown>]> {
-    const response = await this.performRequest("PUT", params, payload);
+    const response = await this.performRequest("PATCH", params, payload);
     const [resource, meta] = await this.deserializePayload(response);
     return [resource as T, meta];
   }

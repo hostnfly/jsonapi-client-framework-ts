@@ -135,7 +135,7 @@ describe("JsonAPIClient", () => {
       MovieWithReleaseDate,
     );
 
-    await client.put({
+    await client.patch({
       data: {
         attributes: { released_at: new Date("1993-06-11T00:00:00.000Z") },
       },

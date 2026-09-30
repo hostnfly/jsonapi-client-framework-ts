@@ -28,7 +28,7 @@ export class JsonAPIResource<T> {
   async update(attributes: Record<string, JsonAPISerializerValue>): Promise<T> {
     const payload = JsonAPISerializer.toJsonAPI(attributes);
     const params = JsonAPIQuery.toRequestParams({ include: this.include });
-    const [resource] = await this.client.put(payload, params);
+    const [resource] = await this.client.patch(payload, params);
     return resource;
   }
 
