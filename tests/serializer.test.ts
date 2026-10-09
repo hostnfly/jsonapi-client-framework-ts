@@ -21,6 +21,18 @@ describe("JsonAPISerializer", () => {
     });
   });
 
+  it("serializes an object attribute", () => {
+    const address = {
+      city: "Paris",
+      geo: { lat: 48.85, lng: 2.35 },
+      zip: null,
+    };
+
+    expect(JsonAPISerializer.toJsonAPI({ address })).toEqual({
+      data: { attributes: { address } },
+    });
+  });
+
   it("serializes a relationship", () => {
     expect(
       JsonAPISerializer.toJsonAPI({ director: { id: "1", type: "person" } }),

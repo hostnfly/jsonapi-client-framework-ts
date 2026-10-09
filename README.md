@@ -332,3 +332,10 @@ await movies
   .resource("178")
   .update({ released_at: new Date("1993-06-11T00:00:00.000Z") });
 ```
+
+An attribute can also be a plain JSON object (nested objects and `null`s included); it is sent as-is under `attributes`. An object with an `id` key is read as a relationship instead, so avoid that key:
+
+```ts
+// Request body: { "data": { "attributes": { "address": { "city": "Paris", "zip": null } } } }
+await people.resource("1").update({ address: { city: "Paris", zip: null } });
+```

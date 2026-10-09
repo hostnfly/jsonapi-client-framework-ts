@@ -1,10 +1,18 @@
 export type JsonAPIAttributeValue = string | number | boolean | Date | null;
+export interface JsonAPIObjectValue {
+  [key: string]:
+    | JsonAPIObjectValue
+    | JsonAPIAttributeValue
+    | JsonAPIObjectValue[]
+    | JsonAPIAttributeValue[];
+}
 export interface JsonAPIRelationshipValue {
   id: string | null;
   type?: string;
 }
 export type JsonAPISerializerValue =
   | JsonAPIAttributeValue
+  | JsonAPIObjectValue
   | JsonAPIRelationshipValue
   | JsonAPIAttributeValue[]
   | JsonAPIRelationshipValue[];
