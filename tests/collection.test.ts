@@ -2,6 +2,7 @@ import { z } from "zod";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { JsonAPICollection, JsonAPISingleton } from "../src/collection.js";
+import { JsonAPIModel } from "../src/model.js";
 import { JsonAPIResourceSchema } from "../src/schema.js";
 
 const Movie = JsonAPIResourceSchema.extend({ title: z.string() });
@@ -9,6 +10,17 @@ const Movie = JsonAPIResourceSchema.extend({ title: z.string() });
 class Movies extends JsonAPICollection<z.infer<typeof Movie>> {
   readonly endpoint = "/movies";
   readonly schema = Movie;
+}
+
+class PersonModel extends JsonAPIModel {
+  static readonly type = "person";
+  declare name?: string;
+}
+
+class MovieModel extends JsonAPIModel {
+  static readonly type = "movie";
+  declare title?: string;
+  declare director?: PersonModel;
 }
 
 class MoviesWithDirector extends JsonAPICollection<z.infer<typeof Movie>> {
@@ -73,6 +85,110 @@ describe("JsonAPICollection", () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toBe("http://example.com/api/movies");
     expect(init?.method).toBe("POST");
+  });
+
+  it("sends the model type when creating a resource", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    await movies.create(MovieModel.build({ title: "Jurassic Park" }));
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      data: { type: "movie", attributes: { title: "Jurassic Park" } },
+    });
+  });
+
+  it("sends the model type and the resource id when updating a resource", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    await movies
+      .resource("179")
+      .update(MovieModel.build({ title: "Jurassic Park" }));
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      data: {
+        type: "movie",
+        id: "179",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+  });
+
+  it("passes the included option through create()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    await movies.create(
+      MovieModel.build({ director: PersonModel.build({ name: "Spielberg" }) }),
+      { included: ["director"] },
+    );
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).included).toEqual([
+      { type: "person", lid: "1", attributes: { name: "Spielberg" } },
+    ]);
+  });
+
+  it("passes the included option through update()", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    await movies.resource("179").update(
+      MovieModel.build({
+        director: PersonModel.build({ name: "Spielberg" }),
+      }),
+      { included: ["director"] },
+    );
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body)).included).toEqual([
+      { type: "person", lid: "1", attributes: { name: "Spielberg" } },
+    ]);
+  });
+
+  it("sends no type with a plain object", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const movies = new Movies("http://example.com/api");
+
+    await movies.create({ title: "Jurassic Park" });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      data: { attributes: { title: "Jurassic Park" } },
+    });
   });
 
   it("passes include through to resource()", async () => {
@@ -176,6 +292,26 @@ describe("JsonAPISingleton", () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     expect(String(url)).toBe("http://example.com/api/featured_movie");
     expect(init?.method).toBe("POST");
+  });
+
+  it("sends the model type and no id when updating the singleton resource", async () => {
+    mockFetchOnce({
+      data: {
+        id: "179",
+        type: "movie",
+        attributes: { title: "Jurassic Park" },
+      },
+    });
+    const featured = new FeaturedMovie("http://example.com/api");
+
+    await featured
+      .resource()
+      .update(MovieModel.build({ title: "Jurassic Park" }));
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      data: { type: "movie", attributes: { title: "Jurassic Park" } },
+    });
   });
 
   it("includes the include param when creating the singleton resource", async () => {
