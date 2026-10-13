@@ -183,7 +183,76 @@ Object attributes are sent as is:
 await movies.resource("179").update({ title: { en: "Jurassic Park", fr: "" } });
 ```
 
-An object with an `id` key is read as a relationship instead, so don't use that key in an object attribute.
+With plain attributes (without a model, see below), an object with an `id` key is read as a relationship instead, so don't use that key in an object attribute.
+
+### Write related resources
+
+Pass a model instance to `create()` or `update()` to write related resources. Declare one class per resource type, extending `JsonAPIModel`: its static `type` is the resource type, its static `relationships` tell which fields are relationships, and `build()` creates an instance from its fields.
+
+```ts
+import { JsonAPIModel } from "jsonapi-client-framework-ts";
+
+class Person extends JsonAPIModel {
+  static readonly type = "person";
+}
+
+class Character extends JsonAPIModel {
+  static readonly type = "character";
+  declare name?: string;
+}
+
+class MovieModel extends JsonAPIModel {
+  static readonly type = "movie";
+  static readonly relationships = {
+    director: { model: Person },
+    characters: { model: Character, included: true },
+  };
+  declare year?: number;
+  declare director?: Person | null;
+  declare characters?: Character[];
+}
+
+// PATCH https://your_api.domain.com/v1/movies/179
+await movies.resource("179").update(
+  MovieModel.build({
+    year: 1993,
+    director: Person.build({ id: "5" }),
+    characters: [
+      Character.build({ name: "Alan Grant" }),
+      Character.build({ id: "7", name: "Ellie Sattler" }),
+    ],
+  }),
+);
+// Request body:
+// {
+//   "data": {
+//     "type": "movie",
+//     "id": "179",
+//     "attributes": { "year": 1993 },
+//     "relationships": {
+//       "director": { "data": { "type": "person", "id": "5" } },
+//       "characters": {
+//         "data": [{ "type": "character", "lid": "1" }, { "type": "character", "id": "7" }]
+//       }
+//     }
+//   },
+//   "included": [
+//     { "type": "character", "lid": "1", "attributes": { "name": "Alan Grant" } },
+//     { "type": "character", "id": "7", "attributes": { "name": "Ellie Sattler" } }
+//   ]
+// }
+```
+
+- The model `type` is sent as `data.type`, and the resource id as `data.id` on `update()` (the id of the endpoint, over the model's `id`), as [JSON:API requires](https://jsonapi.org/format/#crud-updating).
+- A field declared in `relationships` is a relationship, any other field is an attribute, even an object with an `id` key. An `undefined` field is not sent, a `null` field is sent.
+- Declare fields with `declare`, and create instances with `build()` rather than a constructor: a class field without `declare` would reset the value set by a base class constructor.
+- A related resource with an `id` is identified by it. One without an `id` is new: it gets a generated [`lid`](https://jsonapi.org/format/#document-resource-object-identification), which the server uses to pair the identifier with the resource.
+- With `included: true`, each related resource is sent in full in the top-level `included` member (`attributes` is `{}` when empty). Otherwise only identifiers are sent, so every item needs an `id`.
+- Related resources can be model instances or plain objects: their type comes from the declared relationship.
+- `null` empties a to-one relationship and `[]` empties a to-many relationship. A relationship you leave out is not sent: the server keeps it as is.
+- The model of a related resource can declare relationships too: nested resources are added to the same `included`, once per `type` and `id`.
+- The `id` and `type` fields of a related resource are never sent as attributes: JSON:API [forbids fields named `id` or `type`](https://jsonapi.org/format/#document-resource-object-fields).
+- A top-level `included` in a request is not defined by the base JSON:API specification: it only works with a server that accepts it. Don't confuse it with the `include` option, which is a query parameter asking the server to return related resources in the response.
 
 ## Advanced features
 
