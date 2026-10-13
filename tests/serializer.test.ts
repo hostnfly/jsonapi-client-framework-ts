@@ -21,6 +21,27 @@ describe("JsonAPISerializer", () => {
     });
   });
 
+  it("serializes an object attribute", () => {
+    expect(
+      JsonAPISerializer.toJsonAPI({ title: { en: "Jurassic Park", fr: "" } }),
+    ).toEqual({
+      data: { attributes: { title: { en: "Jurassic Park", fr: "" } } },
+    });
+  });
+
+  it("serializes a nested object attribute", () => {
+    const address = {
+      city: "Paris",
+      geo: { lat: 48.85, lng: 2.35 },
+      tags: ["center", "historic"],
+      zip: null,
+    };
+
+    expect(JsonAPISerializer.toJsonAPI({ address })).toEqual({
+      data: { attributes: { address } },
+    });
+  });
+
   it("serializes a relationship", () => {
     expect(
       JsonAPISerializer.toJsonAPI({ director: { id: "1", type: "person" } }),

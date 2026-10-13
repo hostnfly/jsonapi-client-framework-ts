@@ -1,4 +1,8 @@
-export type JsonAPIAttributeValue = string | number | boolean | Date | null;
+export type JsonAPIAttributeValue =
+  string | number | boolean | Date | null | JsonAPIAttributeObject;
+export interface JsonAPIAttributeObject {
+  [key: string]: JsonAPIAttributeValue | JsonAPIAttributeValue[] | undefined;
+}
 export interface JsonAPIRelationshipValue {
   id: string | null;
   type?: string;

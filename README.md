@@ -176,6 +176,15 @@ const movies = new Movies("https://your_api.domain.com/v1");
 const updatedMovie = await movies.resource("179").update({ year: 1993 });
 ```
 
+Object attributes are sent as is:
+
+```ts
+// Request body: { "data": { "attributes": { "title": { "en": "Jurassic Park", "fr": "" } } } }
+await movies.resource("179").update({ title: { en: "Jurassic Park", fr: "" } });
+```
+
+An object with an `id` key is read as a relationship instead, so don't use that key in an object attribute.
+
 ## Advanced features
 
 ### Authentication
