@@ -7,6 +7,7 @@ import {
   type JsonAPIIncludeValue,
   type JsonAPISortValue,
 } from "./query.js";
+import type { JsonAPIModel } from "./model.js";
 import { JsonAPIResource } from "./resource.js";
 import { JsonAPIResourcesList } from "./resourcesList.js";
 import {
@@ -32,7 +33,9 @@ abstract class JsonAPIBaseResource<T> {
     );
   }
 
-  async create(attributes: Record<string, JsonAPISerializerValue>): Promise<T> {
+  async create(
+    attributes: Record<string, JsonAPISerializerValue> | JsonAPIModel,
+  ): Promise<T> {
     const payload = JsonAPISerializer.toJsonAPI(attributes);
     const params = JsonAPIQuery.toRequestParams({ include: this.include });
     const [resource] = await this.client.post(payload, params);
@@ -68,7 +71,9 @@ export abstract class JsonAPICollection<T> extends JsonAPIBaseResource<T> {
       this.schema,
       this.auth,
     );
-    return new JsonAPIResource<T>(client, this.include);
+    return new JsonAPIResource<T>(client, this.include, {
+      id: resourceId,
+    });
   }
 
   list(options: JsonAPIListOptions = {}): JsonAPIResourcesList<T> {

@@ -22,4 +22,12 @@ export {
   JsonAPIResourceIdentifier,
   JsonAPIResourceSchema,
 } from "./schema.js";
-export { JsonAPISerializer } from "./serializer.js";
+export {
+  JsonAPIModel,
+  type JsonAPIModelClass,
+  type JsonAPIModelRelationship,
+} from "./model.js";
+export {
+  JsonAPISerializer,
+  type JsonAPISerializerValue,
+} from "./serializer.js";
