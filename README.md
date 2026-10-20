@@ -183,7 +183,82 @@ Object attributes are sent as is:
 await movies.resource("179").update({ title: { en: "Jurassic Park", fr: "" } });
 ```
 
-An object with an `id` key is read as a relationship instead, so don't use that key in an object attribute.
+With plain attributes (without a model, see below), an object with an `id` key is read as a relationship instead, so don't use that key in an object attribute.
+
+### Write related resources
+
+Pass a model instance to `create()` or `update()` to write related resources. Declare one class per resource type, extending `JsonAPIModel` with a static `type`, and create instances with `build()`. A field holding model instances is a relationship; `included` lists the relationships whose resources are sent in full, with dotted paths for nested ones.
+
+```ts
+import { JsonAPIModel } from "jsonapi-client-framework-ts";
+
+class Person extends JsonAPIModel {
+  static readonly type = "person";
+  declare name?: string;
+}
+
+class Character extends JsonAPIModel {
+  static readonly type = "character";
+  declare name?: string;
+  declare actor?: Person;
+}
+
+class MovieModel extends JsonAPIModel {
+  static readonly type = "movie";
+  declare year?: number;
+  declare director?: Person | null;
+  declare characters?: Character[];
+}
+
+// PATCH https://your_api.domain.com/v1/movies/179
+await movies.resource("179").update(
+  MovieModel.build({
+    year: 1993,
+    director: Person.build({ id: "5" }),
+    characters: [
+      Character.build({
+        name: "Alan Grant",
+        actor: Person.build({ name: "Sam Neill" }),
+      }),
+      Character.build({ id: "7", name: "Ellie Sattler" }),
+    ],
+  }),
+  { included: ["characters.actor"] },
+);
+// Request body:
+// {
+//   "data": {
+//     "type": "movie",
+//     "id": "179",
+//     "attributes": { "year": 1993 },
+//     "relationships": {
+//       "director": { "data": { "type": "person", "id": "5" } },
+//       "characters": {
+//         "data": [{ "type": "character", "lid": "1" }, { "type": "character", "id": "7" }]
+//       }
+//     }
+//   },
+//   "included": [
+//     { "type": "person", "lid": "2", "attributes": { "name": "Sam Neill" } },
+//     {
+//       "type": "character",
+//       "lid": "1",
+//       "attributes": { "name": "Alan Grant" },
+//       "relationships": { "actor": { "data": { "type": "person", "lid": "2" } } }
+//     },
+//     { "type": "character", "id": "7", "attributes": { "name": "Ellie Sattler" } }
+//   ]
+// }
+```
+
+- The model `type` is sent as `data.type`, and the resource id as `data.id` on `update()` (the id of the endpoint, over the model's `id`), as [JSON:API requires](https://jsonapi.org/format/#crud-updating).
+- A field holding a model instance, or a list of them, is a [relationship](https://jsonapi.org/format/#document-resource-object-relationships); any other field is an attribute, even an object with an `id` key. An `undefined` field is not sent, a `null` field is sent.
+- A relationship listed in `included` sends each related resource in full in the top-level `included` member (`attributes` is `{}` when empty). A related resource with an `id` is paired by it; a new one gets a generated [`lid`](https://jsonapi.org/format/#document-resource-object-identification). Each resource is sent once per `type` and `id`.
+- A relationship not listed in `included` sends identifiers only, so every related resource needs an `id`.
+- A relationship you leave out is not sent: the server keeps it as is.
+- Declare fields with `declare`, and create instances with `build()` rather than a constructor: a class field without `declare` would reset the value set by a base class constructor.
+- The `id` and `type` fields of a related resource are never sent as attributes: JSON:API [forbids fields named `id` or `type`](https://jsonapi.org/format/#document-resource-object-fields).
+- A top-level `included` in a request is not defined by the base JSON:API specification: it only works with a server that accepts it. Don't confuse it with the `include` option, which is a query parameter asking the server to return related resources in the response.
 
 ## Advanced features
 
